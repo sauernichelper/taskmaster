@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  pdfPath     String?
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  subtasks    Subtask[]
+}
+
+model Subtask {
+  id        String   @id @default(cuid())
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
