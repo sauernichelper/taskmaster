@@ -19,6 +19,10 @@ type FormatTaskDateOptions = {
   includeYear?: boolean;
 };
 
+function getDatePart(parts: Intl.DateTimeFormatPart[], type: string) {
+  return parts.find((part) => part.type === type)?.value ?? "";
+}
+
 export function formatTaskDate(
   isoDate: string,
   { includeYear = true }: FormatTaskDateOptions = {},
@@ -29,7 +33,20 @@ export function formatTaskDate(
     return "Invalid date";
   }
 
-  return includeYear
-    ? taskDateFormatter.format(date)
-    : taskDateShortFormatter.format(date);
+  const formatter = includeYear ? taskDateFormatter : taskDateShortFormatter;
+  const parts = formatter.formatToParts(date);
+  const month = getDatePart(parts, "month");
+  const day = getDatePart(parts, "day");
+  const year = getDatePart(parts, "year");
+  const hour = getDatePart(parts, "hour");
+  const minute = getDatePart(parts, "minute");
+  const dayPeriod = getDatePart(parts, "dayPeriod");
+  const time = [hour, minute].filter(Boolean).join(":");
+  const timeWithPeriod = [time, dayPeriod].filter(Boolean).join(" ");
+
+  if (includeYear) {
+    return `${month} ${day}, ${year}, ${timeWithPeriod}`;
+  }
+
+  return `${month} ${day}, ${timeWithPeriod}`;
 }

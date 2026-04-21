@@ -29,7 +29,7 @@ export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
 
     void import("react-pdf")
       .then(({ Document, Page, pdfjs }) => {
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+        pdfjs.GlobalWorkerOptions.workerSrc = "/api/pdf-worker";
 
         if (mounted) {
           setPdfComponents({ Document, Page });
