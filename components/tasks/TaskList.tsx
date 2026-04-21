@@ -36,6 +36,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { formatTaskDate } from "@/lib/date-format";
 import type { SubtaskDTO, TaskCreateInput, TaskDTO } from "@/lib/task-types";
 
 import { TaskDetail } from "./TaskDetail";
@@ -575,12 +576,8 @@ export function TaskList({ initialTasks }: TaskListProps) {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Updated {new Intl.DateTimeFormat(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      }).format(new Date(task.updatedAt))}
+                      Updated{" "}
+                      {formatTaskDate(task.updatedAt, { includeYear: false })}
                     </p>
                   </div>
                 </CardContent>

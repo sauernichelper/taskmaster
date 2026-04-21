@@ -2,31 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
-import dynamic from "next/dynamic";
 
 import { Button } from "@/components/ui/button";
-
-const Document = dynamic(() => import("react-pdf").then((mod) => mod.Document), {
-  ssr: false,
-  loading: () => (
-    <div className="px-4 py-8 text-sm text-muted-foreground">
-      Loading PDF...
-    </div>
-  ),
-});
-
-const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), {
-  ssr: false,
-  loading: () => (
-    <div className="px-4 py-8 text-sm text-muted-foreground">
-      Rendering page...
-    </div>
-  ),
-});
 
 type TaskPdfPreviewProps = {
   filePath: string;
 };
+
+type ReactPdfComponents = Pick<typeof import("react-pdf"), "Document" | "Page">;
 
 export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -34,17 +17,29 @@ export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [workerReady, setWorkerReady] = useState(false);
+  const [pdfComponents, setPdfComponents] =
+    useState<ReactPdfComponents | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     let mounted = true;
 
-    void import("react-pdf").then(({ pdfjs }) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-      if (mounted) {
-        setWorkerReady(true);
-      }
-    });
+    void import("react-pdf")
+      .then(({ Document, Page, pdfjs }) => {
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+        if (mounted) {
+          setPdfComponents({ Document, Page });
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setError("Unable to load this PDF.");
+        }
+      });
 
     return () => {
       mounted = false;
@@ -52,6 +47,10 @@ export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !("ResizeObserver" in window)) {
+      return;
+    }
+
     const element = containerRef.current;
 
     if (!element) {
@@ -77,6 +76,9 @@ export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
     setPageCount(document.numPages);
     setError(null);
   }
+
+  const Document = pdfComponents?.Document;
+  const Page = pdfComponents?.Page;
 
   return (
     <div ref={containerRef} className="grid gap-3">
@@ -122,7 +124,7 @@ export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
       <div className="overflow-hidden rounded-lg border bg-muted/30">
         {error ? (
           <div className="px-4 py-8 text-sm text-destructive">{error}</div>
-        ) : workerReady ? (
+        ) : Document && Page ? (
           <Document
             file={filePath}
             loading={
@@ -140,7 +142,11 @@ export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
           >
             <Page
               pageNumber={pageNumber}
-              width={containerWidth > 0 ? Math.min(containerWidth - 2, 820) : 620}
+              renderAnnotationLayer={false}
+              renderTextLayer={false}
+              width={
+                containerWidth > 0 ? Math.min(containerWidth - 2, 820) : 620
+              }
               loading={
                 <div className="px-4 py-8 text-sm text-muted-foreground">
                   Rendering page...

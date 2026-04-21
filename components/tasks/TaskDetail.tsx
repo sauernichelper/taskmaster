@@ -1,5 +1,7 @@
 "use client";
 
+import type { ComponentType } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -7,7 +9,6 @@ import {
   CircleDashed,
   FileText,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,18 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatTaskDate } from "@/lib/date-format";
 import type { SubtaskDTO, TaskDTO } from "@/lib/task-types";
 
 import { SubtaskForm } from "./SubtaskForm";
 import { SubtaskList } from "./SubtaskList";
-
-const TaskPdfPreview = dynamic(
-  () =>
-    import("@/components/pdf/TaskPdfPreview").then(
-      (mod) => mod.TaskPdfPreview,
-    ),
-  { ssr: false },
-);
 
 type TaskDetailProps = {
   open: boolean;
@@ -39,13 +33,7 @@ type TaskDetailProps = {
   onDeleteSubtask: (subtask: SubtaskDTO) => Promise<void>;
 };
 
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
+type TaskPdfPreviewComponent = ComponentType<{ filePath: string }>;
 
 function getTaskStatus(task: TaskDTO) {
   if (task.completed) {
@@ -72,6 +60,34 @@ export function TaskDetail({
   onToggleSubtask,
   onDeleteSubtask,
 }: TaskDetailProps) {
+  const [shouldRenderPdf, setShouldRenderPdf] = useState(false);
+  const [TaskPdfPreview, setTaskPdfPreview] =
+    useState<TaskPdfPreviewComponent | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const canRenderPdf =
+      open && Boolean(task?.pdfPath) && typeof window !== "undefined";
+
+    setShouldRenderPdf(canRenderPdf);
+
+    if (!canRenderPdf || TaskPdfPreview) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void import("@/components/pdf/TaskPdfPreview").then((mod) => {
+      if (!cancelled) {
+        setTaskPdfPreview(() => mod.TaskPdfPreview);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, task?.pdfPath, TaskPdfPreview]);
+
   if (!task) {
     return null;
   }
@@ -109,9 +125,9 @@ export function TaskDetail({
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <CalendarDays className="size-3.5" />
-              Created {dateFormatter.format(new Date(task.createdAt))}
+              Created {formatTaskDate(task.createdAt)}
             </span>
-            <span>Updated {dateFormatter.format(new Date(task.updatedAt))}</span>
+            <span>Updated {formatTaskDate(task.updatedAt)}</span>
           </div>
 
           <section className="grid gap-3">
@@ -133,7 +149,7 @@ export function TaskDetail({
             />
           </section>
 
-          {open && task.pdfPath ? (
+          {shouldRenderPdf && task.pdfPath && TaskPdfPreview ? (
             <TaskPdfPreview filePath={task.pdfPath} />
           ) : null}
         </div>
