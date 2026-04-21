@@ -2,22 +2,54 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
-import { Document, Page, pdfjs } from "react-pdf";
+import dynamic from "next/dynamic";
 
 import { Button } from "@/components/ui/button";
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/api/pdf-worker";
+const Document = dynamic(() => import("react-pdf").then((mod) => mod.Document), {
+  ssr: false,
+  loading: () => (
+    <div className="px-4 py-8 text-sm text-muted-foreground">
+      Loading PDF...
+    </div>
+  ),
+});
 
-type PDFViewerClientProps = {
+const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), {
+  ssr: false,
+  loading: () => (
+    <div className="px-4 py-8 text-sm text-muted-foreground">
+      Rendering page...
+    </div>
+  ),
+});
+
+type TaskPdfPreviewProps = {
   filePath: string;
 };
 
-export function PDFViewerClient({ filePath }: PDFViewerClientProps) {
+export function TaskPdfPreview({ filePath }: TaskPdfPreviewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [workerReady, setWorkerReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void import("react-pdf").then(({ pdfjs }) => {
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+      if (mounted) {
+        setWorkerReady(true);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -37,6 +69,7 @@ export function PDFViewerClient({ filePath }: PDFViewerClientProps) {
 
   useEffect(() => {
     setPageNumber(1);
+    setPageCount(0);
     setError(null);
   }, [filePath]);
 
@@ -89,7 +122,7 @@ export function PDFViewerClient({ filePath }: PDFViewerClientProps) {
       <div className="overflow-hidden rounded-lg border bg-muted/30">
         {error ? (
           <div className="px-4 py-8 text-sm text-destructive">{error}</div>
-        ) : (
+        ) : workerReady ? (
           <Document
             file={filePath}
             loading={
@@ -115,6 +148,10 @@ export function PDFViewerClient({ filePath }: PDFViewerClientProps) {
               }
             />
           </Document>
+        ) : (
+          <div className="px-4 py-8 text-sm text-muted-foreground">
+            Loading PDF...
+          </div>
         )}
       </div>
     </div>

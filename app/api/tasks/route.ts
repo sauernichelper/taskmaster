@@ -19,12 +19,18 @@ function normalizeTaskInput(body: unknown): TaskCreateInput | null {
     typeof data.pdfPath === "string" && data.pdfPath.trim().length > 0
       ? data.pdfPath.trim()
       : null;
+  const subtaskTitles = Array.isArray(data.subtaskTitles)
+    ? data.subtaskTitles
+        .filter((title): title is string => typeof title === "string")
+        .map((title) => title.trim())
+        .filter(Boolean)
+    : [];
 
   if (!title) {
     return null;
   }
 
-  return { title, description, pdfPath };
+  return { title, description, pdfPath, subtaskTitles };
 }
 
 export async function GET() {
@@ -47,7 +53,19 @@ export async function POST(request: Request) {
   }
 
   const task = await prisma.task.create({
-    data: input,
+    data: {
+      title: input.title,
+      description: input.description,
+      pdfPath: input.pdfPath,
+      subtasks:
+        input.subtaskTitles && input.subtaskTitles.length > 0
+          ? {
+              createMany: {
+                data: input.subtaskTitles.map((title) => ({ title })),
+              },
+            }
+          : undefined,
+    },
     include: taskWithSubtasks,
   });
 

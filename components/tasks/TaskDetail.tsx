@@ -21,8 +21,11 @@ import type { SubtaskDTO, TaskDTO } from "@/lib/task-types";
 import { SubtaskForm } from "./SubtaskForm";
 import { SubtaskList } from "./SubtaskList";
 
-const PDFViewer = dynamic(
-  () => import("@/components/pdf/PDFViewer").then((mod) => mod.PDFViewer),
+const TaskPdfPreview = dynamic(
+  () =>
+    import("@/components/pdf/TaskPdfPreview").then(
+      (mod) => mod.TaskPdfPreview,
+    ),
   { ssr: false },
 );
 
@@ -130,7 +133,9 @@ export function TaskDetail({
             />
           </section>
 
-          {task.pdfPath ? <PDFViewer filePath={task.pdfPath} /> : null}
+          {open && task.pdfPath ? (
+            <TaskPdfPreview filePath={task.pdfPath} />
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

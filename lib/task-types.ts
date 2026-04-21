@@ -18,13 +18,17 @@ export type TaskDTO = {
   subtasks: SubtaskDTO[];
 };
 
-export type TaskCreateInput = {
+export type TaskBaseInput = {
   title: string;
   description?: string | null;
   pdfPath?: string | null;
 };
 
-export type TaskUpdateInput = Partial<TaskCreateInput> & {
+export type TaskCreateInput = TaskBaseInput & {
+  subtaskTitles?: string[];
+};
+
+export type TaskUpdateInput = Partial<TaskBaseInput> & {
   completed?: boolean;
 };
 

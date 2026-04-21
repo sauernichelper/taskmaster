@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { FileText, X } from "lucide-react";
+import { FileText, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export function TaskForm({
   const [description, setDescription] = useState("");
   const [pdfPath, setPdfPath] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [subtaskTitles, setSubtaskTitles] = useState<string[]>([""]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +51,7 @@ export function TaskForm({
     setDescription(task?.description ?? "");
     setPdfPath(task?.pdfPath ?? null);
     setPdfFile(null);
+    setSubtaskTitles(task ? [] : [""]);
     setFileInputKey((current) => current + 1);
     setUploading(false);
     setError(null);
@@ -79,6 +81,9 @@ export function TaskForm({
 
     const cleanTitle = title.trim();
     const cleanDescription = description.trim();
+    const cleanSubtaskTitles = subtaskTitles
+      .map((subtaskTitle) => subtaskTitle.trim())
+      .filter(Boolean);
 
     if (!cleanTitle) {
       setError("Enter a task title.");
@@ -105,6 +110,7 @@ export function TaskForm({
         title: cleanTitle,
         description: cleanDescription.length > 0 ? cleanDescription : null,
         pdfPath: uploadedPdfPath,
+        subtaskTitles: task ? undefined : cleanSubtaskTitles,
       });
     } catch (uploadError) {
       setError(
@@ -203,6 +209,58 @@ export function TaskForm({
               </div>
             ) : null}
           </div>
+
+          {!task ? (
+            <div className="grid gap-2">
+              <label className="text-sm font-medium" htmlFor="task-subtask-0">
+                Subtasks
+              </label>
+              <div className="grid gap-2">
+                {subtaskTitles.map((subtaskTitle, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      id={`task-subtask-${index}`}
+                      value={subtaskTitle}
+                      onChange={(event) => {
+                        const nextTitles = [...subtaskTitles];
+                        nextTitles[index] = event.target.value;
+                        setSubtaskTitles(nextTitles);
+                      }}
+                      placeholder="Add a subtask"
+                      disabled={busy}
+                    />
+                    {subtaskTitles.length > 1 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Remove subtask field"
+                        disabled={busy}
+                        onClick={() =>
+                          setSubtaskTitles((current) =>
+                            current.filter((_, itemIndex) => itemIndex !== index),
+                          )
+                        }
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                disabled={busy}
+                onClick={() => setSubtaskTitles((current) => [...current, ""])}
+              >
+                <Plus className="size-4" />
+                Add subtask
+              </Button>
+            </div>
+          ) : null}
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
